@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Topic-Based Question Game</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                background-color: #f0f8ff;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                height: 100vh;
+            }
+            h1 {
+                color: #333;
+                animation: fadeIn 1s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                }
+                to {
+                    opacity: 1;
+                }
+            }
+            .page {
+                display: none;
+            }
+            .page.active {
+                display: block;
+            }
+            .textarea-container,
+            .topic-container {
+                margin: 20px auto;
+                text-align: left;
+                width: 80%;
+                max-width: 500px;
+            }
+            textarea {
+                width: 100%;
+                height: 100px;
+                margin-bottom: 10px;
+                padding: 10px;
+                font-size: 1rem;
+                border: 2px solid #0078d4;
+                border-radius: 5px;
+                resize: none;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+            textarea:focus {
+                border-color: #005bb5;
+                box-shadow: 0 0 10px rgba(0, 91, 181, 0.5);
+                outline: none;
+            }
+            .button {
+                padding: 10px 20px;
+                font-size: 1rem;
+                color: #fff;
+                background-color: #0078d4;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background-color 0.3s ease, transform 0.3s ease;
+            }
+            .button:hover {
+                background-color: #005bb5;
+                transform: scale(1.1);
+            }
+            .button.disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
+            .question-list {
+                margin: 20px auto;
+                width: 80%;
+                max-width: 500px;
+                text-align: left;
+            }
+            .question-list-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                background-color: #ffffff;
+            }
+            .question-list-item input {
+                width: 70%;
+                padding: 5px;
+                font-size: 1rem;
+            }
+            .action-buttons {
+                display: flex;
+                gap: 5px;
+            }
+            /* Play Page Styles */
+            #play-page {
+                background-color: #e8f4fc;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+                margin: 20px;
+            }
+            #questions-container .question {
+                margin: 10px auto;
+                padding: 15px;
+                border: 1px solid #0078d4;
+                border-radius: 10px;
+                background-color: #ffffff;
+                cursor: pointer;
+                transition: background-color 0.3s ease, transform 0.3s ease;
+            }
+            #questions-container .question:hover {
+                background-color: #e0f2ff;
+                transform: scale(1.02);
+            }
+            #questions-container .answer-container {
+                display: none;
+                margin-top: 10px;
+            }
+            #questions-container .answer-container input {
+                width: 80%;
+                padding: 8px;
+                margin: 10px 0;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                font-size: 1rem;
+            }
+            #questions-container button {
+                margin-top: 10px;
+            }
+            #to-manage-page {
+                margin-top: 20px;
+            }
+            /* Enhanced styles for topic input and dropdown */
+            #topic-input {
+                width: calc(100% - 20px);
+                margin: 10px 0;
+                padding: 10px;
+                font-size: 1rem;
+                border: 2px solid #0078d4;
+                border-radius: 5px;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            #topic-input:focus {
+                border-color: #005bb5;
+                box-shadow: 0 0 10px rgba(0, 91, 181, 0.5);
+                outline: none;
+            }
+
+            #topic-select {
+                width: 100%;
+                padding: 10px;
+                font-size: 1rem;
+                margin-top: 10px;
+                border: 2px solid #0078d4;
+                border-radius: 5px;
+                background-color: #f9f9f9;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            #topic-select:focus {
+                border-color: #005bb5;
+                box-shadow: 0 0 10px rgba(0, 91, 181, 0.5);
+                outline: none;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Topic-Based Question Game</h1>
+        <div class="page" id="manage-page">
+            <div class="topic-container">
+                <input id="topic-input" type="text" placeholder="Enter topic name..." />
+                <button class="button" id="add-topic">Add Topic</button>
+                <button class="button" id="update-topic">Update Topic</button>
+                <button class="button" id="delete-topic">Delete Topic</button>
+                <select id="topic-select"></select>
+            </div>
+
+            <div class="textarea-container">
+                <textarea id="question-input" placeholder="Enter your questions, one per line..."></textarea>
+                <button class="button" id="save-questions">Save Questions</button>
+            </div>
+            <div class="question-list" id="question-list"></div>
+            <button class="button" id="to-play-page">Go to Play Page</button>
+        </div>
+        <div class="page" id="play-page">
+            <div id="questions-container"></div>
+            <button class="button" id="to-manage-page">Go to Manage Page</button>
+        </div>
+        <script>
+            const managePage = document.getElementById("manage-page");
+            const playPage = document.getElementById("play-page");
+            const topicInput = document.getElementById("topic-input");
+            const addTopicButton = document.getElementById("add-topic");
+            const topicSelect = document.getElementById("topic-select");
+            const questionList = document.getElementById("question-list");
+            const questionsContainer = document.getElementById("questions-container");
+            const questionInput = document.getElementById("question-input");
+            const saveButton = document.getElementById("save-questions");
+            const toPlayPageButton = document.getElementById("to-play-page");
+            const toManagePageButton = document.getElementById("to-manage-page");
+
+            const updateTopicButton = document.getElementById('update-topic');
+
+updateTopicButton.addEventListener('click', () => {
+    const selectedTopic = topicSelect.value;
+    const newTopicName = topicInput.value.trim();
+    if (selectedTopic && newTopicName) {
+        const topics = loadTopics();
+        if (topics[selectedTopic] && !topics[newTopicName]) {
+            // Keep the order intact
+            const updatedTopics = {};
+            for (const topic in topics) {
+                if (topic === selectedTopic) {
+                    updatedTopics[newTopicName] = topics[topic];
+                } else {
+                    updatedTopics[topic] = topics[topic];
+                }
+            }
+            saveTopics(updatedTopics);
+            renderTopics();
+            topicSelect.value = newTopicName; // Set the dropdown to the updated topic
+            alert(`Topic updated to "${newTopicName}"`);
+        } else if (topics[newTopicName]) {
+            alert('A topic with the new name already exists!');
+        }
+    } else {
+        alert('Please select a topic and enter a new name!');
+    }
+    topicInput.value = ''; // Clear input after updating
+});
+
+
+            document.getElementById("delete-topic").addEventListener("click", () => {
+                const selectedTopic = topicSelect.value;
+                if (selectedTopic) {
+                    const confirmation = confirm(`Are you sure you want to delete the topic "${selectedTopic}" and all its questions?`);
+                    if (confirmation) {
+                        const topics = loadTopics();
+                        delete topics[selectedTopic];
+                        saveTopics(topics);
+                        renderTopics();
+                        renderQuestionList();
+                        alert("Topic deleted successfully!");
+                    }
+                } else {
+                    alert("Please select a topic to delete!");
+                }
+            });
+
+            function switchPage(page) {
+                managePage.classList.remove("active");
+                playPage.classList.remove("active");
+                page.classList.add("active");
+            }
+
+            function loadTopics() {
+                return JSON.parse(localStorage.getItem("topics")) || {};
+            }
+
+            function saveTopics(topics) {
+                localStorage.setItem("topics", JSON.stringify(topics));
+            }
+
+            function renderTopics() {
+                topicSelect.innerHTML = "";
+                const topics = loadTopics();
+                for (const topic in topics) {
+                    const option = document.createElement("option");
+                    option.value = topic;
+                    option.textContent = topic;
+                    topicSelect.appendChild(option);
+                }
+            }
+
+            function renderQuestionList() {
+                questionList.innerHTML = "";
+                const topics = loadTopics();
+                const selectedTopic = topicSelect.value;
+                if (!selectedTopic) return;
+
+                const questions = topics[selectedTopic] || [];
+                questions.forEach((question, index) => {
+                    const listItem = document.createElement("div");
+                    listItem.classList.add("question-list-item");
+
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.value = question;
+
+                    const actionButtons = document.createElement("div");
+                    actionButtons.classList.add("action-buttons");
+
+                    const updateButton = document.createElement("button");
+                    updateButton.textContent = "Update";
+                    updateButton.classList.add("button");
+                    updateButton.addEventListener("click", () => {
+                        questions[index] = input.value;
+                        topics[selectedTopic] = questions;
+                        saveTopics(topics);
+                        renderQuestionList();
+                    });
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete";
+                    deleteButton.classList.add("button");
+                    deleteButton.addEventListener("click", () => {
+                        questions.splice(index, 1);
+                        topics[selectedTopic] = questions;
+                        saveTopics(topics);
+                        renderQuestionList();
+                    });
+
+                    actionButtons.appendChild(updateButton);
+                    actionButtons.appendChild(deleteButton);
+
+                    listItem.appendChild(input);
+                    listItem.appendChild(actionButtons);
+
+                    questionList.appendChild(listItem);
+                });
+            }
+
+            function renderPlayQuestions() {
+                questionsContainer.innerHTML = "";
+                const topics = loadTopics();
+                const selectedTopic = topicSelect.value;
+                if (!selectedTopic) return;
+
+                const questions = topics[selectedTopic] || [];
+                let currentQuestionIndex = 0;
+
+                questions.forEach((question, index) => {
+                    const questionElement = document.createElement("div");
+                    questionElement.textContent = "Click to reveal";
+                    questionElement.classList.add("question");
+
+                    const answerContainer = document.createElement("div");
+                    answerContainer.classList.add("answer-container");
+
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.placeholder = "Your answer...";
+
+                    const submitButton = document.createElement("button");
+                    submitButton.textContent = "Submit";
+                    submitButton.classList.add("button");
+                    submitButton.addEventListener("click", () => {
+                        if (input.value.trim() !== "") {
+                            input.disabled = true;
+                            submitButton.disabled = true;
+                            currentQuestionIndex++;
+                            if (currentQuestionIndex < questions.length) {
+                                questionsContainer.children[currentQuestionIndex * 2].scrollIntoView({ behavior: "smooth" });
+                            }
+                        } else {
+                            alert("Please provide an answer!");
+                        }
+                    });
+
+                    questionElement.addEventListener("click", () => {
+                        if (index === currentQuestionIndex) {
+                            questionElement.textContent = question;
+                            answerContainer.style.display = "block";
+                        }
+                    });
+
+                    answerContainer.appendChild(input);
+                    answerContainer.appendChild(submitButton);
+                    questionsContainer.appendChild(questionElement);
+                    questionsContainer.appendChild(answerContainer);
+                });
+            }
+
+            addTopicButton.addEventListener("click", () => {
+                const newTopic = topicInput.value.trim();
+                if (newTopic) {
+                    const topics = loadTopics();
+                    if (!topics[newTopic]) {
+                        topics[newTopic] = [];
+                        saveTopics(topics);
+                        renderTopics();
+                    }
+                    topicInput.value = "";
+                } else {
+                    alert("Please enter a topic name!");
+                }
+            });
+
+            saveButton.addEventListener("click", () => {
+                const newQuestions = questionInput.value.split("\n").filter((q) => q.trim() !== "");
+                const selectedTopic = topicSelect.value;
+                if (selectedTopic && newQuestions.length > 0) {
+                    const topics = loadTopics();
+                    topics[selectedTopic] = [...(topics[selectedTopic] || []), ...newQuestions];
+                    saveTopics(topics);
+                    questionInput.value = "";
+                    renderQuestionList();
+                } else {
+                    alert("Please select a topic and enter at least one question!");
+                }
+            });
+
+            toPlayPageButton.addEventListener("click", () => {
+                renderPlayQuestions();
+                switchPage(playPage);
+            });
+
+            toManagePageButton.addEventListener("click", () => {
+                switchPage(managePage);
+            });
+
+            renderTopics();
+            renderQuestionList();
+            switchPage(managePage);
+            // Add this event listener after defining renderQuestionList and renderTopics
+
+            topicSelect.addEventListener("change", () => {
+                renderQuestionList();
+            });
+
+            toPlayPageButton.addEventListener("click", () => {
+                renderPlayQuestions();
+                switchPage(playPage);
+            });
+
+            toManagePageButton.addEventListener("click", () => {
+                renderQuestionList(); // Refresh the question list when returning to Manage Page
+                switchPage(managePage);
+            });
+
+            // Ensure both renderTopics and renderQuestionList are invoked on topic load.
+            renderTopics();
+            renderQuestionList();
+            switchPage(managePage);
+        </script>
+    </body>
+</html>
